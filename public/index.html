@@ -43,7 +43,7 @@
     let polilineaActual;
     let decoradorActual;
 
-    fetch('recorridos.json')
+    fetch('/lineas_colectivo_tandil.json')
       .then(res => res.json())
       .then(data => {
         recorridos = data;
