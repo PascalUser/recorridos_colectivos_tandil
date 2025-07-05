@@ -4,11 +4,11 @@
   <title>Mapa Colectivos</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
+
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  
+
   <!-- Geocoder -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
   <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
@@ -18,14 +18,13 @@
 
   <style>
     #map { height: 90vh; }
+    #linea-select { width: 200px; height: 120px; }
   </style>
 </head>
 <body>
   <h2>Mapa de colectivos</h2>
-  <label for="linea-select">Línea: </label>
-  <select id="linea-select">
-    <option value="linea_500">Línea 500</option>
-  </select>
+  <label for="linea-select">Seleccionar líneas:</label><br />
+  <select id="linea-select" multiple></select>
   <div id="map"></div>
 
   <script>
@@ -39,40 +38,73 @@
     // Geocoder
     L.Control.geocoder({ defaultMarkGeocode: true }).addTo(map);
 
-    let recorridos;
-    let polilineaActual;
-    let decoradorActual;
+    let recorridos = {};
+    const capas = {}; // Almacena líneas y decoradores por línea
 
+    // Colores por línea
+    const colores = {
+      'linea_500': 'yellow',
+      'linea_501': 'red',
+      'linea_502': 'white',
+      'linea_503': 'blue',
+      'linea_504': 'green',
+      'linea_505_a': 'brown',
+      'linea_505_b': 'brown'
+    };
+
+    // Cargar JSON y poblar select
     fetch('/lineas_colectivo_tandil.json')
       .then(res => res.json())
       .then(data => {
         recorridos = data;
-        dibujarRecorrido('linea_500');
+        const select = document.getElementById('linea-select');
+        for (let linea in recorridos) {
+          const option = document.createElement('option');
+          option.value = linea;
+          option.textContent = linea;
+          select.appendChild(option);
+        }
       });
 
-    function dibujarRecorrido(linea) {
-      if (!recorridos || !recorridos[linea]) return;
-
-      if (polilineaActual) {
-        map.removeLayer(polilineaActual);
-        map.removeLayer(decoradorActual);
+    // Dibujar múltiples líneas
+    function dibujarLineas(lineasSeleccionadas) {
+      // Borrar líneas anteriores
+      for (let key in capas) {
+        map.removeLayer(capas[key].polyline);
+        map.removeLayer(capas[key].decorador);
       }
 
-      const coords = recorridos[linea];
-      polilineaActual = L.polyline(coords, { color: 'blue' }).addTo(map);
-      map.fitBounds(polilineaActual.getBounds());
+      for (let linea of lineasSeleccionadas) {
+        const coords = recorridos[linea];
+        const color = colores[linea] || 'black';
 
-      decoradorActual = L.polylineDecorator(polilineaActual, {
-        patterns: [{
-          offset: '5%',
-          repeat: '10%',
-          symbol: L.Symbol.arrowHead({ pixelSize: 8, polygon: false, pathOptions: { stroke: true, color: 'blue' } })
-        }]
-      }).addTo(map);
+        const poly = L.polyline(coords, { color }).addTo(map);
+        const decorador = L.polylineDecorator(poly, {
+          patterns: [{
+            offset: '5%',
+            repeat: '10%',
+            symbol: L.Symbol.arrowHead({
+              pixelSize: 8,
+              polygon: false,
+              pathOptions: { stroke: true, color }
+            })
+          }]
+        }).addTo(map);
+
+        capas[linea] = { polyline: poly, decorador };
+      }
+
+      // Ajustar el mapa para mostrar todas las líneas
+      const todasLasCoords = lineasSeleccionadas.flatMap(l => recorridos[l]);
+      if (todasLasCoords.length) {
+        map.fitBounds(todasLasCoords);
+      }
     }
 
+    // Escuchar cambios en el select múltiple
     document.getElementById('linea-select').addEventListener('change', e => {
-      dibujarRecorrido(e.target.value);
+      const seleccionadas = Array.from(e.target.selectedOptions).map(opt => opt.value);
+      dibujarLineas(seleccionadas);
     });
   </script>
 </body>

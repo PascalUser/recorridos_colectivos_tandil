@@ -62,3 +62,11 @@ def generar_json():
 if __name__ == "__main__":
     generar_json()
     print("Archivo JSON generado exitosamente.")
+    
+    # Testing unit
+    # Escribir todas las lineas presentes en el JSON
+    with open(path_salida, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+        print("Líneas de colectivo encontradas:")
+        for linea in data.keys():
+            print(linea)
