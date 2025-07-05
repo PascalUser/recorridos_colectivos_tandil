@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mapa Colectivos</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  
+  <!-- Geocoder -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+  <!-- PolylineDecorator (flechas de dirección) -->
+  <script src="https://unpkg.com/leaflet-polylinedecorator@1.7.0/dist/leaflet.polylineDecorator.min.js"></script>
+
+  <style>
+    #map { height: 90vh; }
+  </style>
+</head>
+<body>
+  <h2>Mapa de colectivos</h2>
+  <label for="linea-select">Línea: </label>
+  <select id="linea-select">
+    <option value="linea_500">Línea 500</option>
+  </select>
+  <div id="map"></div>
+
+  <script>
+    const map = L.map('map').setView([-37.293011, -59.163662], 14);
+
+    // Capa base
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19
+    }).addTo(map);
+
+    // Geocoder
+    L.Control.geocoder({ defaultMarkGeocode: true }).addTo(map);
+
+    let recorridos;
+    let polilineaActual;
+    let decoradorActual;
+
+    fetch('recorridos.json')
+      .then(res => res.json())
+      .then(data => {
+        recorridos = data;
+        dibujarRecorrido('linea_500');
+      });
+
+    function dibujarRecorrido(linea) {
+      if (!recorridos || !recorridos[linea]) return;
+
+      if (polilineaActual) {
+        map.removeLayer(polilineaActual);
+        map.removeLayer(decoradorActual);
+      }
+
+      const coords = recorridos[linea];
+      polilineaActual = L.polyline(coords, { color: 'blue' }).addTo(map);
+      map.fitBounds(polilineaActual.getBounds());
+
+      decoradorActual = L.polylineDecorator(polilineaActual, {
+        patterns: [{
+          offset: '5%',
+          repeat: '10%',
+          symbol: L.Symbol.arrowHead({ pixelSize: 8, polygon: false, pathOptions: { stroke: true, color: 'blue' } })
+        }]
+      }).addTo(map);
+    }
+
+    document.getElementById('linea-select').addEventListener('change', e => {
+      dibujarRecorrido(e.target.value);
+    });
+  </script>
+</body>
+</html>
